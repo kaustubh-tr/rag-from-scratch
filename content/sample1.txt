@@ -1,0 +1,11 @@
+The RAG (Retrieval-Augmented Generation) system is a powerful architecture that combines the strengths of retrieval-based and generation-based models.
+It retrieves relevant documents from a knowledge base and uses them to augment the input of a large language model (LLM).
+This allows the LLM to generate more accurate and up-to-date responses, even for information it was not trained on.
+Key components of a RAG system include:
+1. Document Ingestion: Loading and processing text from various sources (PDFs, text files, etc.).
+2. Chunking: Splitting long documents into smaller, manageable pieces.
+3. Embedding: Converting text chunks into vector representations using an embedding model.
+4. Vector Store: Storing embeddings in a database optimized for similarity search (e.g., pgvector).
+5. Retrieval: Finding the most relevant chunks for a given user query.
+6. Generation: Using an LLM to generate an answer based on the retrieved context.
+This project implements a RAG system from scratch in Python, supporting both OpenAI and open-source models.
