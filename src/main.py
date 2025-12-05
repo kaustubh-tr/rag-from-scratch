@@ -1,12 +1,12 @@
 import asyncio
 import os
 import argparse
-from config import Config
-from ingestion.chunkers import CharacterChunker, TokenChunker
-from embedding.models import OpenAIEmbedder, HuggingFaceEmbedder
-from storage.vector_store import PostgresVectorStore
-from generation.llm import OpenAILLM, HuggingFaceLLM
-from pipeline import RAGPipeline
+from config.settings import Config
+from src.rag.ingestion.chunkers import CharacterChunker, TokenChunker
+from src.rag.embedding.models import OpenAIEmbedder, HuggingFaceEmbedder
+from src.rag.storage.vector_store import PostgresVectorStore
+from src.rag.generation.llm import OpenAILLM, HuggingFaceLLM
+from src.rag.pipeline import RAGPipeline
 
 
 async def main():
