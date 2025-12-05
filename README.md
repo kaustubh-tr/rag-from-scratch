@@ -59,6 +59,7 @@ The system follows a standard RAG pipeline:
 
 4.  **Set up the database**:
     Create a database (replace dbname with your desired name):
+
     ```sql
     CREATE DATABASE dbname;
     ```
@@ -112,13 +113,45 @@ The system provides a CLI via `main.py`.
 **Ingest a file using Hugging Face embeddings and Token chunking:**
 
 ```bash
-python main.py --ingest sample.pdf --embedding-provider huggingface --chunking-strategy token
+python -m src.main --ingest data/sample1.txt --embedding-provider huggingface --chunking-strategy token
 ```
 
 **Query the system using OpenAI LLM:**
 
 ```bash
-python main.py --query "What is the main topic?" --llm-provider openai
+python -m src.main --query "What is the main topic?" --llm-provider openai
+```
+
+## Project Structure
+
+```
+rag-from-scratch/
+├── config/
+│   └── settings.py              # Configuration management
+├── data/                        # Sample data
+│   ├── sample1.txt
+│   └── sample2.txt
+├── src/
+│   ├── main.py                  # CLI Entry point
+│   └── rag/
+│       ├── pipeline.py          # RAG Orchestrator
+│       ├── core/                # Abstract Base Classes & Data Structures
+│       │   └── interfaces.py
+│       ├── ingestion/           # Data Loading & Chunking
+│       │   ├── loaders.py
+│       │   └── chunkers.py
+│       ├── embedding/           # Embedding Models
+│       │   └── models.py
+│       ├── storage/             # Vector Database
+│       │   └── vector_store.py
+│       ├── retrieval/           # Search Logic
+│       │   └── search.py
+│       └── generation/          # LLM Integration
+│           └── llm.py
+├── .env.example                 # Environment variables
+├── .gitignore                   # Git ignore file
+├── README.md                    # Project documentation
+└── requirements.txt             # Project dependencies
 ```
 
 ## Database Schema
