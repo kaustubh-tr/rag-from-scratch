@@ -6,11 +6,12 @@ from config import Config
 
 
 class PostgresVectorStore(VectorStore):
-    def __init__(self, db_url: str = Config.POSTGRES_DB_URL):
+    def __init__(self, db_url: str = Config.POSTGRES_DB_URL, dimension: int = Config.EMBEDDING_DIMENSIONS):
         if not db_url:
             raise ValueError("Database URL is not configured.")
         self.db_url = db_url
         self.pool = None
+        self.dimension = dimension
 
     async def connect(self):
         if not self.pool:
@@ -31,8 +32,7 @@ class PostgresVectorStore(VectorStore):
             await conn.execute('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"')
 
             # Create tables
-            await conn.execute(
-                """
+            await conn.execute("""
                 CREATE TABLE IF NOT EXISTS documents (
                     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
                     source_path TEXT NOT NULL,
@@ -45,8 +45,7 @@ class PostgresVectorStore(VectorStore):
             """
             )
 
-            await conn.execute(
-                """
+            await conn.execute("""
                 CREATE TABLE IF NOT EXISTS chunks (
                     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
                     document_id UUID NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
@@ -60,12 +59,11 @@ class PostgresVectorStore(VectorStore):
             """
             )
 
-            await conn.execute(
-                """
+            await conn.execute(f"""
                 CREATE TABLE IF NOT EXISTS embeddings (
                     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
                     chunk_id UUID NOT NULL REFERENCES chunks(id) ON DELETE CASCADE,
-                    embedding vector,
+                    embedding vector({self.dimension}),
                     model TEXT,
                     created_at TIMESTAMPTZ DEFAULT NOW(),
                     updated_at TIMESTAMPTZ DEFAULT NOW(),
@@ -75,8 +73,7 @@ class PostgresVectorStore(VectorStore):
             )
 
             # Trigger function
-            await conn.execute(
-                """
+            await conn.execute("""
                 CREATE OR REPLACE FUNCTION set_updated_at()
                 RETURNS TRIGGER AS $$
                 BEGIN
@@ -88,8 +85,7 @@ class PostgresVectorStore(VectorStore):
             )
 
             # Attach triggers
-            await conn.execute(
-                """
+            await conn.execute("""
                 DROP TRIGGER IF EXISTS documents_updated_at ON documents;
                 CREATE TRIGGER documents_updated_at
                 BEFORE UPDATE ON documents
@@ -97,8 +93,7 @@ class PostgresVectorStore(VectorStore):
                 EXECUTE FUNCTION set_updated_at();
             """
             )
-            await conn.execute(
-                """
+            await conn.execute("""
                 DROP TRIGGER IF EXISTS chunks_updated_at ON chunks;
                 CREATE TRIGGER chunks_updated_at
                 BEFORE UPDATE ON chunks
@@ -106,13 +101,21 @@ class PostgresVectorStore(VectorStore):
                 EXECUTE FUNCTION set_updated_at();
             """
             )
-            await conn.execute(
-                """
+            await conn.execute("""
                 DROP TRIGGER IF EXISTS embeddings_updated_at ON embeddings;
                 CREATE TRIGGER embeddings_updated_at
                 BEFORE UPDATE ON embeddings
                 FOR EACH ROW
                 EXECUTE FUNCTION set_updated_at();
+            """
+            )
+
+            # Create Index
+            await conn.execute("""
+                CREATE INDEX IF NOT EXISTS idx_embeddings_hnsw 
+                ON embeddings 
+                USING hnsw (embedding vector_cosine_ops) 
+                WITH (m = 16, ef_construction = 64);
             """
             )
 
@@ -165,12 +168,10 @@ class PostgresVectorStore(VectorStore):
                         k: v for k, v in full_meta.items() if k not in doc_keys
                     }
 
-                    chunk_id = await conn.fetchval(
-                        """
+                    chunk_id = await conn.fetchval("""
                         INSERT INTO chunks (document_id, chunk_index, content, metadata)
-                        VALUES ($1, $2, $3, $4)
-                        RETURNING id
-                        """,
+                        VALUES ($1, $2, $3, $4) RETURNING id
+                    """,
                         doc_id,
                         i,
                         doc_content,
@@ -190,34 +191,36 @@ class PostgresVectorStore(VectorStore):
     ) -> List[str]:
         if not self.pool:
             await self.connect()
-
-        sql = """
-            SELECT c.content 
-            FROM embeddings e
-            JOIN chunks c ON e.chunk_id = c.id
-            JOIN documents d ON c.document_id = d.id
-        """
-
-        params = [str(query_embedding), k]
-        where_clauses = []
-        param_index = 3
-
-        if filters:
-            for key, value in filters.items():
-                if key == "source_path":
-                    where_clauses.append(f"d.source_path = ${param_index}")
-                    params.append(value)
-                    param_index += 1
-                else:
-                    where_clauses.append(f"d.metadata->>'{key}' = ${param_index}")
-                    params.append(str(value))
-                    param_index += 1
-
-        if where_clauses:
-            sql += " WHERE " + " AND ".join(where_clauses)
-
-        sql += " ORDER BY e.embedding <=> $1 LIMIT $2"
-
+        
         async with self.pool.acquire() as conn:
-            rows = await conn.fetch(sql, *params)
+            await conn.execute("SET hnsw.ef_search = 40")
+
+            search_query = """
+                SELECT c.content 
+                FROM embeddings e
+                JOIN chunks c ON e.chunk_id = c.id
+                JOIN documents d ON c.document_id = d.id
+            """
+
+            params = [str(query_embedding), k]
+            where_clauses = []
+            param_index = 3
+
+            if filters:
+                for key, value in filters.items():
+                    if key == "source_path":
+                        where_clauses.append(f"d.source_path = ${param_index}")
+                        params.append(value)
+                        param_index += 1
+                    else:
+                        where_clauses.append(f"d.metadata->>'{key}' = ${param_index}")
+                        params.append(str(value))
+                        param_index += 1
+
+            if where_clauses:
+                search_query += " WHERE " + " AND ".join(where_clauses)
+
+            search_query += " ORDER BY e.embedding <=> $1 LIMIT $2"
+
+            rows = await conn.fetch(search_query, *params)
             return [row["content"] for row in rows]
