@@ -2,8 +2,8 @@ from typing import List
 import asyncio
 from openai import AsyncOpenAI
 from sentence_transformers import SentenceTransformer
-from core.interfaces import EmbeddingModel
-from config import Config
+from src.rag.core.interfaces import EmbeddingModel
+from config.settings import Config
 
 
 class OpenAIEmbedder(EmbeddingModel):

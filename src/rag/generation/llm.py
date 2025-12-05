@@ -3,8 +3,8 @@ from typing import Optional
 from openai import AsyncOpenAI
 from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
 import torch
-from core.interfaces import BaseLLM
-from config import Config
+from src.rag.core.interfaces import BaseLLM
+from config.settings import Config
 
 
 class OpenAILLM(BaseLLM):

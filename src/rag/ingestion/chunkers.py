@@ -1,7 +1,7 @@
 from typing import List
 import tiktoken
-from core.interfaces import ChunkingStrategy, Document
-from config import Config
+from src.rag.core.interfaces import ChunkingStrategy, Document
+from config.settings import Config
 
 
 class CharacterChunker(ChunkingStrategy):

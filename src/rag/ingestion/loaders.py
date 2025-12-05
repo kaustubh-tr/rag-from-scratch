@@ -1,7 +1,7 @@
 import os
 from typing import List
 from pypdf import PdfReader
-from core.interfaces import Document
+from src.rag.core.interfaces import Document
 
 
 def load_text(path: str) -> List[Document]:

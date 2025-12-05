@@ -1,8 +1,8 @@
 import asyncpg
 from typing import List, Dict, Any
 import json
-from core.interfaces import VectorStore
-from config import Config
+from src.rag.core.interfaces import VectorStore
+from config.settings import Config
 
 
 class PostgresVectorStore(VectorStore):

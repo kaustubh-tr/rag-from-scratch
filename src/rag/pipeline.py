@@ -1,7 +1,7 @@
 from typing import List, Dict, Any
-from core.interfaces import ChunkingStrategy, EmbeddingModel, VectorStore, BaseLLM
-from ingestion.loaders import load_document
-from retrieval.search import Retriever
+from src.rag.core.interfaces import ChunkingStrategy, EmbeddingModel, VectorStore, BaseLLM
+from src.rag.ingestion.loaders import load_document
+from src.rag.retrieval.search import Retriever
 
 
 class RAGPipeline:

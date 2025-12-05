@@ -1,5 +1,5 @@
 from typing import List, Dict, Any
-from core.interfaces import VectorStore, EmbeddingModel
+from src.rag.core.interfaces import VectorStore, EmbeddingModel
 
 
 class Retriever:
